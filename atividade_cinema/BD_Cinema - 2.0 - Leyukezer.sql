@@ -13,7 +13,8 @@ Sexo.nome_sex as Sexo,
 Tsa.fator_tsa as Fator,
 Tsa.rh_tsa as Rh
 from
-Cliente left join Sexo on (Cliente.id_sex_fk = Sexo.id_sex)
+Cliente 
+left join Sexo on (Cliente.id_sex_fk = Sexo.id_sex)
 left join Tipo_Sanguineo as Tsa on (Cliente.id_tsa_fk = Tsa.id_tsa)
 where
 ((cliente.id_sex_fk = 1) and (Tsa.rh_tsa = '+'));
@@ -26,10 +27,12 @@ concat("R$ ",format(funcionario.salario_fun,2,'pt-BR')) as Salario,
 sexo.nome_sex as Sexo,
 funcao.nome_func as Funcao
 from
-funcionario inner join sexo on (funcionario.id_sex_fk = sexo.id_sex)
+funcionario right join sexo on (funcionario.id_sex_fk = sexo.id_sex)
 right join funcao on (funcionario.id_func_fk = funcao.id_func)
 where
 ((funcao.nome_func like "%ar")or(funcao.nome_func like "%or"));
+
+select * from funcao;
 
 #3: Selecione o número, a data, o saldo inicial, o saldo final e o funcionário (nome) dos Caixas. Garanta que todos os funcionários sejam mostrados, mesmo aqueles sem relação com Caixa. Selecione apenas os caixas com saldo final superior a mil reais.
 select
@@ -44,7 +47,7 @@ where
 (caixa.saldo_final_cai > 1000);
 
 #4: Selecione o valor, a data, a parcela, o status, a forma, o caixa (número e data) e despesa (descrição, valor e vencimento) dos Pagamentos. Selecione apenas os pagamentos com status Aberto e com data nos meses 5 ao 10.
-<<<<<<< HEAD
+
 select 
 concat('R$ ', format(pagamento.valor_pag, 2, 'pt-BR')) as Valor,
 date_format(pagamento.data_pag, '%d/%m/%Y') as Data_Pagamento,
@@ -137,18 +140,3 @@ produto.nome_prod as Produto
 from
 venda_produto inner join venda on (venda_produto.id_vend_fk = venda.id_vend)
 inner join produto on (venda_produto.id_prod_fk = produto.id_prod);
-=======
-
-
-#5: Selecione o título, o gênero, a duração e a classificação (nome) dos Filmes. Garanta que todas as classificações sejam mostradas, mesmo aquelas sem relação com filme. Selecione apenas os filmes com diretor informado e duração inferior a 2 horas.
-
-#6: Selecione o número, a fileira, o status e a sala (nome) das Poltronas. Selecione apenas as poltronas com status Livre da fileira inferior a 50.
-
-#7: Selecione a hora de início, a data, a hora do filme, a sala (nome e número) e o filme (título) da Sessão. Selecione apenas as sessões matutinas e noturnas.
-
-#8: Selecione o valor, a data e a sessão (hora do início) do Ingresso. Selecione apenas os ingressos que possuem código de barras com o dígito 01 e com data da sessão iniciada no primeiro semestre de 2021.
-
-#9: Selecione o valor, a hora, a data, a poltrona (número), o ingresso (valor), o funcionário (nome), o cliente (nome) das Vendas. Você deverá garantir que TODOS os clientes sejam listados, mesmo aqueles sem vendas relacionadas. Ordene pelo nome do cliente.
-
-# Exercício 10: Selecione o valor, a data, os produtos_vendidos (quantidade_venda e valor_venda) e o produto (nome) das Vendas.
->>>>>>> 7dd54c4617b365f2300f83f8612c998cdcff6727
