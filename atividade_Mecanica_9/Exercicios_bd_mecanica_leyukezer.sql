@@ -51,7 +51,46 @@ order by
 funcionario.nome_func;
 
 # 3. Selecione o nome do Cliente e os dados dos seus Carros. Você deverá garantir que todos os clientes sejam mostrados independente de terem carro ou não. Crie uma condição para mostrar somente carros com motorização 1.0 e com 4 portas. Ordene pelo modelo do carro.
-# 4. Selecione a data e o valor da Compra, razão social do Fornecedor e os nomes, quantidade e valor dos Produtos comprados no ano de 2023. Você também deverá adicionar colunas na consulta que retorne a média e a soma dos valores de compras e a média, soma, máximo e mínimo da quantidade e do valor pago nos itens da compra (produtos). Ordem pelo nome do fornecedor.
+select
+cliente.nome_cli as nome,
+carro.modelo_car as carro,
+carro.cor_car as cor,
+carro.marca_car as marca,
+carro.placa_car as placa,
+carro.portas_car as portas
+from
+cliente left join carro on (carro.id_cli_fk = cliente.id_cli)
+where
+((carro.modelo_car like "%1.0") and (carro.portas_car like "4%"))
+order by
+carro.modelo_car;
+
+
+# 4. Selecione a data e o valor da Compra, razão social do Fornecedor e os nomes, quantidade e valor dos Produtos comprados no ano de 2023. 
+# Você também deverá adicionar colunas na consulta que retorne a média e a soma dos valores de compras e a média, soma, máximo e mínimo da quantidade e do valor pago nos itens da compra (produtos). Ordem pelo nome do fornecedor.
+select
+compra.data_comp as data_compra,
+concat('R$ ',format(compra.valor_total_comp, 2, 'pt-BR')) as valor_compra,
+fornecedor.razao_social_forn as fornecedor,
+fornecedor.nome_fantasia_forn as nome_fornecedor,
+fornecedor.representante_forn as representante,
+concat('R$ ',format((select avg(compra.valor_total_comp) from compra where (compra.id_forn_fk = fornecedor.id_forn)), 2, 'pt-BR')) as media_compras,
+concat('R$ ',format((select sum(compra.valor_total_comp) from compra where (compra.id_forn_fk = fornecedor.id_forn)),2,'pt-BR')) as total_compras,
+concat('R$ ',format((select avg(itens_compra.valor_itc) from itens_compra where (itens_compra.id_comp_fk = compra.id_comp)),2,'pt-BR')) as media_valor,
+concat('R$ ',format((select sum(itens_compra.valor_itc) from itens_compra where (itens_compra.id_comp_fk = compra.id_comp)), 2, 'pr-BR')) as total_valor,
+concat('R$ ',format((select max(itens_compra.valor_itc) from itens_compra where (itens_compra.id_comp_fk = compra.id_comp)), 2, 'pt-BR')) as maior_valor_itens,
+concat('R$ ',format((select min(itens_compra.valor_itc) from itens_compra where (itens_compra.id_comp_fk = compra.id_comp)), 2, 'pt-BR')) as menor_valor_itens,
+format((select avg(itens_compra.quant_itc) from itens_compra where (itens_compra.id_comp_fk = compra.id_comp)), 0, 'pt-BR') as media_itens,
+(select sum(itens_compra.quant_itc) from itens_compra where (itens_compra.id_comp_fk = compra.id_comp)) as total_itens,
+(select max(itens_compra.quant_itc) from itens_compra where (itens_compra.id_comp_fk = compra.id_comp)) as maior_quantidade_itens,
+(select min(itens_compra.quant_itc) from itens_compra where (itens_compra.id_comp_fk = compra.id_comp)) as menor_quantidade_itens
+from
+compra inner join fornecedor on (fornecedor.id_forn = compra.id_forn_fk)
+where
+(year(compra.data_comp) = 2023)
+order by
+fornecedor.nome_fantasia_forn;
+
 # 5. Selecione a data e o valor da Venda, nome do Cliente e os nomes, quantidade e valor dos Produtos vendidos no ano de 2023 e 2022. Você também deverá adicionar colunas na consulta que retorne a média e a soma dos valores de vendas e a média, soma, máximo e mínimo da quantidade e do valor pago nos itens da venda (produtos). Ordem pelo nome do cliente.
 # 6. Selecione o código, a data, o valor e a forma de pagamento dos Pagamentos, o id, status e a data do Caixa, o nome do Funcionário e a descrição, data de vencimento e o valor da Despesa. Você também deverá adicionar uma coluna na consulta que retorne o valor médio, máximo, mínimo e a soma dos pagamentos. Você não poderá mostrar pagamento referentes a Compras.
 # 7. Selecione o nome fantasia e o CNPJ do Fornecedor, assim como a quantidade, valor médio e a soma do valor total das Compras que ele participou. Você deverá garantir que todos os fornecedores sejam listados independente de terem relação com compra. Ordene de forma decrescente pela soma das compras.
