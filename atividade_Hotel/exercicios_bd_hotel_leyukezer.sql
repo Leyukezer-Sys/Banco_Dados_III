@@ -29,7 +29,7 @@ ultimo_checkin desc;
 #3 Selecione o número do quarto e a quantidade total de hospedagens feitas no quarto. 
 select
 quarto.numero_qua as numero,
-(select count(*) from hospedagem where (hospedagem.id_qua_fk = quarto.id_qua)) as total_hospedagem
+(select count(hospedagem.id_qua_fk) from hospedagem where (hospedagem.id_qua_fk = quarto.id_qua)) as total_hospedagem
 from
 quarto
 order by
@@ -74,18 +74,20 @@ where
 ((hospedagem.id_hos_fk = hospede.id_hos)and(hospedagem.id_qua_fk = quarto.id_qua));
 
 #7 Aumente em 15% o valor da diária de todos os quartos que têm uma diária menor que a diária média dos quartos. 
+set @media = (select avg(quarto.valor_qua) from quarto);
 update
-quarto join (select avg(quarto.valor_qua) as media_quarto from quarto) as media on (quarto.valor_qua < media.media_quarto)
+quarto
 set
-quarto.valor_qua = 1.15 * quarto.valor_qua;
+quarto.valor_qua = 1.15 * quarto.valor_qua where (quarto.valor_qua < @media);
 
 #8 Aumente em 20% o valor da diária dos quartos classificados como "luxo", desde que estejam abaixo da média de diárias dos quartos de luxo. 
+set @media_luxo = (select avg(quarto.valor_qua) from quarto where (quarto.tipo_qua like 'luxo'));
 update
-quarto join (select avg(quarto.valor_qua)as media from quarto where (quarto.tipo_qua like 'luxo')) as media_quarto on (quarto.valor_qua<media_quarto.media)
+quarto
 set
 quarto.valor_qua = 1.2 * quarto.valor_qua
 where
-((quarto.tipo_qua like 'luxo'));
+((quarto.tipo_qua like 'luxo') and (quarto.valor_qua < @media_luxo));
 
 #9 Diminua em 10% o valor da diária dos quartos que nunca foram utilizadas em uma hospedagem.
 update
@@ -93,7 +95,7 @@ quarto
 set
 quarto.valor_qua = quarto.valor_qua - (0.1 * quarto.valor_qua)
 where
-((select count(*) from hospedagem where (hospedagem.id_qua_fk = quarto.id_qua)) < 1);
+(quarto.id_qua not in (select id_qua_fk from hospedagem));
 
 #10 Mostre os dados do quarto junto com o total de vezes que o mesmo foi limpo, o valor total de produtos disponíveis no quarto e a quantidade total de produtos disponíveis no quarto.
 select
