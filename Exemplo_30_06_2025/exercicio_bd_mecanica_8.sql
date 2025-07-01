@@ -45,7 +45,7 @@ $$ delimiter ;
 
 call inserir_item(100,1000,10,3);
 
-#jackson
+#Desafio Jackson
 
 delimiter $$
 create trigger atualizar_produto_venda after delete on 
@@ -97,3 +97,7 @@ update produto set valor_prod = new.valor_itc * 1.4 where (id_prod = new.id_prod
 update compra set valor_total_comp = valor_total_comp + (new.valor_itc*quant_itc) where (id_comp = new.id_comp_fk);
 end;
 $$ delimiter ;
+
+#Inserir itens compra
+
+create pricedure 
