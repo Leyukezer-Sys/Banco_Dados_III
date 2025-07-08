@@ -28,11 +28,11 @@ set data_encerramento = (select data_encerramento_con from conta_bancaria where 
 
 set count_conta = (select count(*) from conta_bancaria where (id_con = conta));
 
-if (valor <> '' || valor is not null)then
-	if (data_deposito <> '' || data_deposito is not null)then
-		if (hora <> '' || hora is not null)then
-			if (tipo <> '' || tipo is not null)then
-				if (conta <> '' || conta is not null)then
+if (valor <> '' or valor is not null)then
+	if (data_deposito is not null)then
+		if (hora is not null)then
+			if (tipo <> '' or tipo is not null)then
+				if (conta <> '' or conta is not null)then
 					if(count_conta <> 0)then
 						if(hour(hora) > 05)then
 							if( data_encerramento is null)then
@@ -170,11 +170,11 @@ set valor_disponivel = (select saldo_con from conta_bancaria where (id_con = con
 
 set count_conta = (select count(*) from conta_bancaria where (id_con = conta));
 
-if (valor <> '' || valor is not null)then
-	if (data_saque <> '' || data_saque is not null)then
-		if (hora <> '' || hora is not null)then
-			if (local_saque <> '' || local_saque is not null)then
-				if (conta <> '' || conta is not null)then
+if (valor <> '' or valor is not null)then
+	if (data_saque is not null)then
+		if (hora is not null)then
+			if (local_saque <> '' or local_saque is not null)then
+				if (conta <> '' or conta is not null)then
 					if(count_conta <> 0)then
 						if((hour(hora) > 06) and (hour(hora) < 22))then
 							if(valor <= 3000)then
@@ -250,7 +250,7 @@ delimiter $$
 create trigger restituir_saque after delete on
 saque for each row
 begin
-        update conta_bancaria set valor_limite_con = valor_limite_con + (old.valor_saq + old.tarifa_saq) where (id_con = new.id_con_fk);
+        update conta_bancaria set valor_limite_con = valor_limite_con + (old.valor_saq + old.tarifa_saq) where (id_con = old.id_con_fk);
 end;
 $$ delimiter ;
 
@@ -274,3 +274,181 @@ call novo_saque(145.00, '2025-06-20', '09:45:00', 'caixa eletrônico', 41);
 call novo_saque(330.00, '2025-06-28', '10:30:00', 'aplicativo de pagamento', 22);
 call novo_saque(190.00, '2025-06-08', '11:15:00', 'caixa eletrônico', 64);
 call novo_saque(285.00, '2025-06-30', '12:00:00', 'aplicativo de pagamento', 16);
+
+
+/*
+Exercício 5: Crie um procedimento para inserir um novo pagamento de acordo
+ com as regras a seguir:
+ 1) Garanta que os campos obrigatórios sejam preenchidos e que a
+ FK de conta bancária realmente exista.
+ 2) Só permita a inserção se houver saldo suficiente na Conta
+ Corrente do cliente, ou seja, o valor do pagamento deve ser
+ MENOR ou IGUAL ao valor do saldo da conta (saldo + limite).
+ 3) Só permita pagamentos entre 9h e 18h.
+ 4) A data e a hora do pagamento não devem ser inseridas na
+ chamada, mas sim coletadas do sistema operacional. Com isso,
+ verifique se a data do pagamento é superior a data do
+ vencimento, caso seja, você deverá adicionar uma tarifa de 5%
+ do valor do pagamento.Caso não seja,a tarifa é zerada.
+ 5) Garanta que o tipo de pagamento possível seja ‘Título’ ou
+ ‘Convênio’;
+ 6) Verifique se código de barras do boleto possui exatamente 10
+ caracteres para o tipo ‘Convênio’ e 20 caracteres para o tipo
+ ‘Título’;
+ 7) Garanta que os beneficiários sejam pessoas jurídicas, assim,
+ verifica que o nome digitado contem algum dos termos ‘ME’,
+ ‘MEI’,‘LTDA’,‘EI’ou‘SA’.
+*/
+
+delimiter $$
+create procedure novo_pagamento (valor float, tipo varchar(100), data_vencimento date, codigo_barras varchar(300), beneficiario varchar(300), conta int)
+begin
+declare data_pagamento date;
+declare hora time;
+declare saldo_limite, tarifa float;
+declare count_conta int;
+
+set count_conta = (select count(*) from conta_bancaria where (id_con = conta));
+
+set data_pagamento = curdate();
+set hora = curtime();
+
+set saldo_limite = (select (saldo_con+valor_limite_con) from conta_bancaria where (id_con = conta));
+
+if(data_pagamento < data_vencimento)then
+	set tarifa = 0;
+else
+	set tarifa = valor * 0.05;
+end if;
+
+if(valor <> '' or valor is not null)then
+	if(tipo <> '' or tipo is not null)then
+		if(valor <> '' or valor is not null)then
+			if( data_vencimento is not null)then
+				if(codigo_barras <> '' or codigo_barras is not null)then
+					if(beneficiario <> '' or beneficiario is not null)then
+						if(count_conta <> 0)then
+							if((hour(hora) > 08) and (hour(hora) < 19))then
+								if((beneficiario like '%ME%') or (beneficiario like '%MEI%') or (beneficiario like '%LTDA%')or (beneficiario like '%EI%') or (beneficiario like '%SA%'))then
+									if(tipo like 'T_tulo')then
+										if(length(codigo_barras) = 20)then
+											insert into pagamento values(null, valor, data_pagamento, hora, tipo, tarifa, data_vencimento, codigo_barras, beneficiario, conta);
+                                            select 'O pagamento foi realizado com sucesso!' as confirmacao;
+                                        else
+											select 'O código de barras para título está incorreto!' as alerta;
+                                        end if;
+                                    elseif (tipo like 'Conv_nio') then
+										if(length(codigo_barras) = 10)then
+											insert into pagamento values(null, valor, data_pagamento, hora, tipo, tarifa, data_vencimento, codigo_barras, beneficiario, conta);
+                                            select 'O pagamento foi realizado com sucesso!' as confirmacao;
+                                        else
+											select 'O código de barras para Convênio está incorreto!' as alerta;
+                                        end if;
+                                    else
+										select 'Os tipos permitidos são Título ou Convênio!' as alerta;
+                                    end if;
+                                else
+									select 'Os beneficiários precisam ser pessoas jurídicas!' as alerta;
+                                end if;
+                            else
+								select 'Só é permitido pagamentos das 9h às 18h' as alerta;
+                            end if;
+						else
+							select concat('A conta #',conta, ' não está cadastrada no sistema!') as alerta;
+						end if;
+					else
+						select 'O beneficiario não pode ser vazio/nulo!' as alerta;
+					end if;
+				else
+					select 'O codigo de barras não pode ser vazio/nulo!' as alerta;
+				end if;
+			else
+				select 'A data de vencimento não pode ser vazio/nulo!' as alerta;
+			end if;
+		else
+			select 'O valor não pode ser vazio/nulo!' as alerta;
+		end if;
+	else
+		select 'O tipo de pagamento não pode ser vazio/nulo!' as alerta;
+	end if;
+else
+	select 'O valor não pode ser vazio/nulo!' as alerta;
+end if;
+
+end;
+$$ delimiter ;
+
+/*
+Exercício 6: Crie um gatilho na tabela pagamento para subtrair o valor do
+ pagamento no saldo da Conta Corrente do cliente após a
+ inserção de novo pagamento de acordo comas seguintes regra:
+ 1) Caso o pagamento utilize o valor do limite, você deverá
+ subtrair primeiro o valor do pagamento do saldo e a
+ diferença no valor do limite. Exemplo: “João possui 100 reais
+ de saldo e 500 de limite e deseja fazer um pagamento de 300
+ reais. O sistema deverá zerar o saldo da conta e subtrair o
+ valor restante (200 reais) do valor do limite.”
+ 2) Subtraia do saldo (se houver) ou limite (se não houver saldo) o
+ valor da tarifa. Caso a conta esteja usando o limite, e não for
+ suficiente para cobrir o valor da tarifa, subtraia o valor do
+ saldo deixando o mesmo negativo.
+ Crie um gatilho na tabela pagamento para somar o valor do
+ pagamento e o valor da tarifa no saldo e no valor do limite da
+ conta corrente de acordo com as regras anteriores após a
+ exclusão de um pagamento.
+ TESTE
+ : Chame o procedimento do Exercício 7 e insira 10
+ pagamentos emcontas diferentes
+*/
+
+delimiter $$
+create trigger debitar_pagamento after insert on
+pagamento for each row
+begin
+	declare debitar_limite float;
+    declare saldo_conta, limite_conta, valor_pagamento float;
+    
+    set valor_pagamento = (new.valor_pag + new.tarifa_pag);
+    set saldo_conta = (select saldo_con from conta_bancaria where (id_con = new.id_con_fk));
+    set limite_conta = (select valor_limite_con from conta_bancaria where (id_con = new.id_con_fk));
+    
+	if(valor_pagamento > (saldo_conta+limite_conta))then
+		set debitar_limite = valor_pagamento - (saldo_conta+limite_conta);
+        update conta_bancaria set saldo_con = 0 - debitar_limite, valor_limite_con = 0 where (id_con = new.id_con_fk);
+	elseif(valor_pagamento > saldo_conta)then
+		set debitar_limite = valor_pagamento - saldo_conta;
+        update conta_bancaria set saldo_con = 0, valor_limite_con = valor_limite_con - debitar_limite where (id_con = new.id_con_fk);
+	else
+        update conta_bancaria set saldo_con = saldo_con - valor_pagamento where (id_con = new.id_con_fk);
+    end if;
+end;
+$$ delimiter ;
+
+delimiter $$
+create trigger restituir_pagamento after delete on
+pagamento for each row
+begin
+	declare saldo_conta, limite_conta, valor_pagamento, restituir float;
+    
+    set valor_pagamento = (old.valor_pag + old.tarifa_pag);
+    set saldo_conta = (select saldo_con from conta_bancaria where (id_con = new.id_con_fk));
+	
+    if(saldo_conta < 0)then
+		set restituir =  saldo_conta + valor_pagamento;
+		update conta_bancaria set valor_limite_con = valor_limite_con + restituir where (id_con = old.id_con_fk);
+    else
+		update conta_bancaria set valor_limite_con = valor_limite_con + valor_pagamento where (id_con = old.id_con_fk);
+    end if;
+end;
+$$ delimiter ;
+
+call novo_pagamento(312.45, 'título', '2025-07-15', '12345678901234567890', 'AlfaTech MEI', 12);
+call novo_pagamento(78.90, 'convênio', '2025-07-20', '9876543210', 'BetaCom LTDA', 33);
+call novo_pagamento(459.00, 'título', '2025-06-18', '11223344556677889900', 'GammaCorp SA', 7);
+call novo_pagamento(150.75, 'convênio', '2025-06-22', '5566778899', 'DeltaServiços EI', 21);
+call novo_pagamento(99.99, 'título', '2025-06-25', '99887766554433221100', 'OmegaTech ME', 45);
+call novo_pagamento(275.60, 'convênio', '2025-06-30', '4433221100', 'SigmaNet LTDA', 3);
+call novo_pagamento(410.00, 'título', '2025-06-17', '66778899001122334455', 'Epsilon SA', 60);
+call novo_pagamento(65.25, 'convênio', '2025-06-19', '3344556677', 'ZetaDigital MEI', 18);
+call novo_pagamento(499.99, 'título', '2025-06-21', '12344321123443211234', 'ThetaCom LTDA', 52);
+call novo_pagamento(120.00, 'convênio', '2025-06-23', '7788990011', 'LambdaServiços EI', 9);
